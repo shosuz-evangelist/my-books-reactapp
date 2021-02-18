@@ -1,36 +1,75 @@
-import React, { Component, lazy, Suspense } from 'react';
-import 'bulma/css/bulma.css';
-import './styles.scss';
-import { Redirect, Route, Switch } from 'react-router-dom';
-import { withRouter } from 'react-router';
-import { HeaderBar, NavBar, NotFound } from './components';
-import About from './About';
+import React, {Component} from 'react';
+import {DataSearch,ReactiveBase,ReactiveList,ResultList,ResultCard, SelectedFilters, MultiList} from '@appbaseio/reactivesearch';
 
-const Products = withRouter(
-  lazy(() => import(/* webpackChunkName: "products" */ './products/Products'))
-);
+const {ResultListWrapper} = ReactiveList;
 
 class App extends Component {
-  render() {
-    return (
-      <div>
-        <HeaderBar />
-        <div className="section columns">
-          <NavBar />
-          <main className="column">
-            <Suspense fallback={<div>Loading...</div>}>
-              <Switch>
-                <Redirect from="/" exact to="/products" />
-                <Route path="/products" component={Products} />
-                <Route path="/about" component={About} />
-                <Route exact path="**" component={NotFound} />
-              </Switch>
-            </Suspense>
-          </main>
-        </div>
-      </div>
-    );
-  }
+    render() {
+        return ( 
+            <div>
+                <ReactiveBase
+                    app="books"
+            		    url = "https://elastic:oGjNH80iFWY3CF8JBUMiwm1x@7007bf8d8b9e4015b4d35473934df903.japaneast.azure.elastic-cloud.com:9243"  
+                >
+                    <DataSearch
+                        componentId = "search-component"
+                        dataField = {["title"]}
+                        queryFormat = "and"
+                    />
+                    <MultiList componentId="CategorySensor" 
+                    dataField="categories.keyword" 
+                    title="カテゴリー" />
+                    <SelectedFilters/>
+                    <ReactiveList
+                        componentId = "list-component"
+                        pagination = {true}
+                        size = {10}
+                        react = {{
+                            "and": ["search-component"]
+                        }}
+                        sortOptions={[
+                          {label: "ベストマッチ", dataField: "_score", sortBy: "desc"},
+                          {label: "ページ数少なめ", dataField: "pageCount", sortBy: "asc"},
+                          {label: "ページ数多め", dataField: "pageCount", sortBy: "desc"},
+                         ]}
+                    >
+
+                        {({data, error, loading}) => (
+                            <ResultListWrapper>
+                                {
+                                    data.map(item => (
+                                        <ResultList key = {item._id}>
+                                            <ResultList.Content>
+                                                <ResultList.Title
+                                                    dangerouslySetInnerHTML = {{
+                                                        __html: item.title
+                                                    }}
+                                                />
+                                                <ResultList.Description>
+                                                    <div> {item.title} </div>
+                                                    <div> {item.isbn} </div>
+                                                    <div> {item.pageCount}ページ </div>
+                                                </ResultList.Description>
+                                                <ResultCard key={item._id}>
+                                                  <ResultCard.Image src={item.thumbnailUrl} />
+                                                  <ResultCard.Title
+                                                    dangerouslySetInnerHTML={{
+                                                      __html: item.title
+                                                    }}
+                                                  />
+                    </ResultCard>
+                                            </ResultList.Content>
+                                        </ResultList>
+
+                                    ))
+                                }
+                            </ResultListWrapper>
+                        )}
+                    </ReactiveList>
+                </ReactiveBase>
+            </div>
+        );
+    }
 }
 
 export default App;
